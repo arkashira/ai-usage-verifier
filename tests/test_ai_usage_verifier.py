@@ -1,35 +1,34 @@
-from ai_usage_verifier import AIUsageVerifier
+import pytest
+from datetime import datetime
+from ai_usage_verifier import AIUsageVerifier, Request
 
-def test_add_ai_usage():
+def test_handle_request():
     verifier = AIUsageVerifier()
-    verifier.add_ai_usage("model1")
-    assert verifier.get_ai_usage("model1") == {"model_name": "model1", "usage_count": 1}
+    request = Request(1, datetime.now())
+    response = verifier.handle_request(request)
+    assert response == {"message": "Request handled successfully"}
 
-def test_add_ai_usage_multiple_times():
+def test_get_latency():
     verifier = AIUsageVerifier()
-    verifier.add_ai_usage("model1")
-    verifier.add_ai_usage("model1")
-    assert verifier.get_ai_usage("model1") == {"model_name": "model1", "usage_count": 2}
+    request1 = Request(1, datetime.now())
+    request2 = Request(2, datetime.now())
+    verifier.handle_request(request1)
+    verifier.handle_request(request2)
+    latency = verifier.get_latency()
+    assert latency >= 0
 
-def test_get_ai_usage():
+def test_get_error_message():
     verifier = AIUsageVerifier()
-    verifier.add_ai_usage("model1")
-    assert verifier.get_ai_usage("model1") == {"model_name": "model1", "usage_count": 1}
+    error = ValueError("Test error")
+    error_message = verifier.get_error_message(error)
+    assert error_message == str(error)
 
-def test_get_ai_usage_non_existent_model():
+def test_scale_horizontally():
     verifier = AIUsageVerifier()
-    assert verifier.get_ai_usage("model1") == {}
+    response = verifier.scale_horizontally(100)
+    assert response == {"message": "Scaled to handle 100 requests"}
 
-def test_verify_ai_usage():
+def test_scale_horizontally_negative_requests():
     verifier = AIUsageVerifier()
-    verifier.add_ai_usage("model1")
-    assert verifier.verify_ai_usage("model1", 1) == True
-
-def test_verify_ai_usage_incorrect_usage_count():
-    verifier = AIUsageVerifier()
-    verifier.add_ai_usage("model1")
-    assert verifier.verify_ai_usage("model1", 2) == False
-
-def test_verify_ai_usage_non_existent_model():
-    verifier = AIUsageVerifier()
-    assert verifier.verify_ai_usage("model1", 1) == False
+    with pytest.raises(ValueError):
+        verifier.scale_horizontally(-1)

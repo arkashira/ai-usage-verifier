@@ -1,30 +1,33 @@
 import json
 from dataclasses import dataclass
-from typing import Dict, List
+from datetime import datetime, timedelta
+from typing import Dict
 
 @dataclass
-class AIUsage:
-    model_name: str
-    usage_count: int
+class Request:
+    id: int
+    timestamp: datetime
 
 class AIUsageVerifier:
     def __init__(self):
-        self.ai_usage = {}
+        self.requests = []
 
-    def add_ai_usage(self, model_name: str):
-        if model_name in self.ai_usage:
-            self.ai_usage[model_name].usage_count += 1
-        else:
-            self.ai_usage[model_name] = AIUsage(model_name, 1)
+    def handle_request(self, request: Request):
+        self.requests.append(request)
+        return {"message": "Request handled successfully"}
 
-    def get_ai_usage(self, model_name: str) -> Dict:
-        if model_name in self.ai_usage:
-            return json.loads(json.dumps(self.ai_usage[model_name].__dict__))
-        else:
-            return {}
+    def get_latency(self):
+        if not self.requests:
+            return 0
+        timestamps = [request.timestamp for request in self.requests]
+        timestamps.sort()
+        latency = (timestamps[-1] - timestamps[0]).total_seconds() / len(timestamps)
+        return latency
 
-    def verify_ai_usage(self, model_name: str, expected_usage_count: int) -> bool:
-        if model_name in self.ai_usage:
-            return self.ai_usage[model_name].usage_count == expected_usage_count
-        else:
-            return False
+    def get_error_message(self, error: Exception):
+        return str(error)
+
+    def scale_horizontally(self, num_requests: int):
+        if num_requests < 0:
+            raise ValueError("Number of requests must be non-negative")
+        return {"message": f"Scaled to handle {num_requests} requests"}

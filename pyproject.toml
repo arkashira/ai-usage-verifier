@@ -5,7 +5,7 @@ build-backend = "poetry.masonry.api"
 [tool.poetry]
 name = "ai-usage-verifier"
 version = "1.0.0"
-description = ""
+description = "AI Usage Verifier"
 
 [tool.poetry.dependencies]
 python = "^3.8"

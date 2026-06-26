@@ -1,59 +1,50 @@
-import os
-import json
 import pytest
-import sys
-sys.path.insert(0, '../src')
-from ai_usage_verifier import scan_repository, generate_report, ModelFile
+from ai_usage_verifier import AiUsageVerifier, VerifiedCall, Dashboard
 
 @pytest.fixture
-def temp_repository(tmp_path):
-    repository_path = tmp_path / 'repository'
-    repository_path.mkdir()
-    yield repository_path
-    for root, dirs, files in os.walk(repository_path):
-        for file in files:
-            os.remove(os.path.join(root, file))
-    repository_path.rmdir()
+def audit_data():
+    return [
+        {'date': '2024-09-16', 'verified': True},
+        {'date': '2024-09-16', 'verified': True},
+        {'date': '2024-09-15', 'verified': True},
+        {'date': '2024-09-14', 'verified': True},
+        {'date': '2024-09-14', 'verified': True},
+        {'date': '2024-09-14', 'verified': True}
+    ]
 
-def test_scan_repository(temp_repository):
-    # Create test files
-    onnx_file = temp_repository / 'model.onnx'
-    onnx_file.touch()
-    pb_file = temp_repository / 'model.pb'
-    pb_file.touch()
-    pt_file = temp_repository / 'model.pt'
-    pt_file.touch()
-    model_files = scan_repository(str(temp_repository))
-    assert len(model_files) == 3
-    assert model_files[0].path == str(onnx_file)
-    assert model_files[0].format == 'ONNX'
-    assert model_files[1].path == str(pb_file)
-    assert model_files[1].format == 'TensorFlow SavedModel'
-    assert model_files[2].path == str(pt_file)
-    assert model_files[2].format == 'PyTorch'
+def test_get_verified_calls(audit_data):
+    ai_usage_verifier = AiUsageVerifier(audit_data)
+    verified_calls = ai_usage_verifier.get_verified_calls(3)
+    assert len(verified_calls) == 3
+    assert verified_calls[0].count == 0  # Because the dates in audit_data are in the past
+    assert verified_calls[1].count == 0  # Because the dates in audit_data are in the past
+    assert verified_calls[2].count == 0  # Because the dates in audit_data are in the past
 
-def test_generate_report():
-    model_files = [ModelFile('path/to/model.onnx', 'ONNX'), ModelFile('path/to/model.pb', 'TensorFlow SavedModel')]
-    report = generate_report(model_files)
-    expected_report = {
-        'model_files': [
-            {'path': 'path/to/model.onnx', 'format': 'ONNX'},
-            {'path': 'path/to/model.pb', 'format': 'TensorFlow SavedModel'}
-        ]
-    }
-    assert json.loads(report) == expected_report
+def test_get_line_chart_data(audit_data):
+    ai_usage_verifier = AiUsageVerifier(audit_data)
+    line_chart_data = ai_usage_verifier.get_line_chart_data(3)
+    assert len(line_chart_data['labels']) == 3
+    assert len(line_chart_data['data']) == 3
+    assert line_chart_data['data'][0] == 0  # Because the dates in audit_data are in the past
+    assert line_chart_data['data'][1] == 0  # Because the dates in audit_data are in the past
+    assert line_chart_data['data'][2] == 0  # Because the dates in audit_data are in the past
 
-def test_scan_repository_empty_directory(tmp_path):
-    repository_path = tmp_path / 'empty_repository'
-    repository_path.mkdir()
-    model_files = scan_repository(str(repository_path))
-    assert len(model_files) == 0
+def test_dashboard_load_data(audit_data):
+    dashboard = Dashboard(AiUsageVerifier([]))
+    dashboard.load_data(audit_data)
+    line_chart = dashboard.get_line_chart(3)
+    assert len(line_chart['labels']) == 3
+    assert len(line_chart['data']) == 3
 
-def test_scan_repository_inaccessible_directory(tmp_path):
-    repository_path = tmp_path / 'inaccessible_repository'
-    repository_path.mkdir()
-    os.chmod(repository_path, 0o000)
-    model_files = scan_repository(str(repository_path))
-    assert len(model_files) == 0
-    os.chmod(repository_path, 0o755)
-    repository_path.rmdir()
+def test_get_verified_calls_empty_data():
+    ai_usage_verifier = AiUsageVerifier([])
+    verified_calls = ai_usage_verifier.get_verified_calls(3)
+    assert len(verified_calls) == 3
+    assert all(call.count == 0 for call in verified_calls)
+
+def test_get_line_chart_data_empty_data():
+    ai_usage_verifier = AiUsageVerifier([])
+    line_chart_data = ai_usage_verifier.get_line_chart_data(3)
+    assert len(line_chart_data['labels']) == 3
+    assert len(line_chart_data['data']) == 3
+    assert all(data == 0 for data in line_chart_data['data'])
